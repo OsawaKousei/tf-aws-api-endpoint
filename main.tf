@@ -33,8 +33,8 @@ data "archive_file" "lambda_zip" {
   type        = "zip"
   output_path = "lambda_function.zip"
   source {
-    content  = "def lambda_handler(event, context):\n    return {'statusCode': 200, 'body': 'Hello from Lambda!'}"
-    filename = "lambda_function.py"
+    content  = "exports.handler = async (event) => {\nreturn {\nstatusCode: 200,\n body: JSON.stringify('Hello from Lambda!')\n};\n};"
+    filename = "index.js"
   }
 }
 
@@ -43,9 +43,9 @@ resource "aws_lambda_function" "app_lambda" {
   filename         = data.archive_file.lambda_zip.output_path
   function_name    = "example-lambda-function"
   role             = aws_iam_role.lambda_role.arn
-  handler          = "lambda_function.lambda_handler"
+  handler          = "index.handler"
   source_code_hash = data.archive_file.lambda_zip.output_base64sha256
-  runtime          = "python3.9"
+  runtime          = "nodejs22.x"
 
   tags = {
     Name = "ExampleLambdaFunction"
