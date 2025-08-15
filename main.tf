@@ -1,5 +1,18 @@
 # export AWS_PROFILE="your-sso-profile-name"
 
+# 変数定義
+variable "lambda_function_name" {
+  description = "Lambda function name"
+  type        = string
+  default     = "example-lambda-function"
+}
+
+variable "api_gateway_name" {
+  description = "API Gateway name"
+  type        = string
+  default     = "example-http-api"
+}
+
 provider "aws" {
   region = "ap-northeast-1"
 }
@@ -41,14 +54,14 @@ data "archive_file" "lambda_zip" {
 # 空のLambda関数を作成します
 resource "aws_lambda_function" "app_lambda" {
   filename         = data.archive_file.lambda_zip.output_path
-  function_name    = "example-lambda-function"
+  function_name    = var.lambda_function_name
   role             = aws_iam_role.lambda_role.arn
   handler          = "index.handler"
   source_code_hash = data.archive_file.lambda_zip.output_base64sha256
   runtime          = "nodejs22.x"
 
   tags = {
-    Name = "ExampleLambdaFunction"
+    Name = var.lambda_function_name
   }
 }
 
@@ -63,12 +76,12 @@ resource "aws_lambda_permission" "allow_api_gateway" {
 
 # HTTP API Gateway を作成
 resource "aws_apigatewayv2_api" "http_api" {
-  name          = "example-http-api"
+  name          = var.api_gateway_name
   protocol_type = "HTTP"
   description   = "Example HTTP API for Lambda integration"
 
   tags = {
-    Name = "ExampleHTTPAPI"
+    Name = var.api_gateway_name
   }
 }
 
