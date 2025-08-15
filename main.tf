@@ -51,3 +51,55 @@ resource "aws_lambda_function" "app_lambda" {
     Name = "ExampleLambdaFunction"
   }
 }
+
+# Lambda関数にAPI Gatewayからの呼び出し権限を付与
+resource "aws_lambda_permission" "allow_api_gateway" {
+  statement_id  = "AllowExecutionFromAPIGateway"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.app_lambda.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_apigatewayv2_api.http_api.execution_arn}/*/*"
+}
+
+# HTTP API Gateway を作成
+resource "aws_apigatewayv2_api" "http_api" {
+  name          = "example-http-api"
+  protocol_type = "HTTP"
+  description   = "Example HTTP API for Lambda integration"
+
+  tags = {
+    Name = "ExampleHTTPAPI"
+  }
+}
+
+# Lambda関数とのインテグレーションを作成
+resource "aws_apigatewayv2_integration" "lambda_integration" {
+  api_id             = aws_apigatewayv2_api.http_api.id
+  integration_type   = "AWS_PROXY"
+  integration_method = "POST"
+  integration_uri    = aws_lambda_function.app_lambda.invoke_arn
+}
+
+# APIのルートを作成
+resource "aws_apigatewayv2_route" "default_route" {
+  api_id    = aws_apigatewayv2_api.http_api.id
+  route_key = "GET /"
+  target    = "integrations/${aws_apigatewayv2_integration.lambda_integration.id}"
+}
+
+# APIのステージを作成
+resource "aws_apigatewayv2_stage" "default_stage" {
+  api_id      = aws_apigatewayv2_api.http_api.id
+  name        = "$default"
+  auto_deploy = true
+
+  tags = {
+    Name = "DefaultStage"
+  }
+}
+
+# API Gateway のエンドポイントURLを出力
+output "api_gateway_url" {
+  description = "HTTP API Gateway endpoint URL"
+  value       = aws_apigatewayv2_api.http_api.api_endpoint
+}
